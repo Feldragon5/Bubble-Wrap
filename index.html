@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Infinite Bubble Wrap</title>
+		<style>
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+
+			html,
+			body {
+				height: 100%;
+				overflow: hidden; /* Prevent body scroll */
+				background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+				display: flex;
+				justify-content: center;
+				align-items: flex-start; /* Align container to the top */
+				font-family: sans-serif;
+			}
+
+			#info {
+				position: fixed;
+				top: 10px;
+				left: 10px;
+				background-color: rgba(0, 0, 0, 0.5);
+				color: white;
+				padding: 5px 10px;
+				border-radius: 5px;
+				font-size: 0.9em;
+				z-index: 100;
+			}
+
+			#bubble-wrap-container {
+				padding-top: 20px; /* Space from top */
+				padding-bottom: 50px; /* Extra space at bottom */
+				width: 90%;
+				max-width: 600px; /* Max width for larger screens */
+				height: 100%;
+				overflow-y: hidden; /* Hide vertical scrollbar, managed by JS */
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				/* The illusion of scrolling is handled by removing top rows and adding bottom rows */
+			}
+
+			.bubble-row {
+				display: flex;
+				justify-content: center;
+				margin-bottom: 10px; /* Spacing between rows */
+				flex-shrink: 0; /* Prevent rows from shrinking */
+				width: 100%;
+			}
+
+			.bubble {
+				width: 50px;
+				height: 50px;
+				background: radial-gradient(
+					circle at 35% 35%,
+					rgba(255, 255, 255, 0.8),
+					rgba(180, 200, 255, 0.4)
+				);
+				border-radius: 50%;
+				margin: 5px;
+				cursor: pointer;
+				transition: background 0.2s ease-out, transform 0.1s ease;
+				box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2),
+					inset 0px 1px 3px rgba(255, 255, 255, 0.6);
+				position: relative; /* For pseudo-elements if needed */
+				user-select: none; /* Prevent text selection */
+				-webkit-user-select: none;
+				-moz-user-select: none;
+				-ms-user-select: none;
+			}
+
+			.bubble:hover:not(.popped) {
+				transform: scale(1.05);
+			}
+			.bubble:active:not(.popped) {
+				transform: scale(0.95);
+			}
+
+			.bubble.popped {
+				background: rgba(150, 170, 220, 0.2);
+				cursor: default;
+				box-shadow: inset 0px 1px 4px rgba(0, 0, 0, 0.2);
+				transform: scale(0.9); /* Make it look slightly deflated */
+			}
+
+			/* Simple Pop Animation */
+			.bubble.popping {
+				animation: pop-animation 0.15s ease-out forwards;
+			}
+
+			@keyframes pop-animation {
+				0% {
+					transform: scale(1);
+					opacity: 1;
+				}
+				50% {
+					transform: scale(1.15); /* Slightly expand */
+					opacity: 0.8;
+				}
+				100% {
+					transform: scale(0.9); /* Settle into popped state */
+					opacity: 1; /* Fade back slightly */
+					background: rgba(
+						150,
+						170,
+						220,
+						0.2
+					); /* Ensure final popped background */
+					box-shadow: inset 0px 1px 4px rgba(0, 0, 0, 0.2); /* Ensure final popped shadow */
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div id="info">Click bubbles or press SPACE to pop!</div>
+		<div id="bubble-wrap-container">
+			<!-- Bubbles will be generated here by JavaScript -->
+		</div>
+
+		<!-- Pop Sound -->
+		<audio
+			id="pop-sound"
+			src="https://cdn.freesound.org/previews/316/316934_5121236-lq.mp3"
+			preload="auto"
+		></audio>
+
+		<script>
+			const container = document.getElementById("bubble-wrap-container");
+			const popSound = document.getElementById("pop-sound");
+			const BUBBLES_PER_ROW = 8; // Adjust based on desired width/bubble size
+			const INITIAL_ROWS = 15; // Number of rows to start with
+
+			let bubbleCount = 0; // Unique ID for bubbles
+
+			// --- Bubble Creation ---
+
+			function createBubble() {
+				const bubble = document.createElement("div");
+				bubble.classList.add("bubble");
+				bubble.dataset.id = `bubble-${bubbleCount++}`; // Assign unique ID (optional)
+				bubble.addEventListener("click", handleBubbleClick);
+				return bubble;
+			}
+
+			function createRow() {
+				const row = document.createElement("div");
+				row.classList.add("bubble-row");
+				for (let i = 0; i < BUBBLES_PER_ROW; i++) {
+					row.appendChild(createBubble());
+				}
+				return row;
+			}
+
+			function addRows(count) {
+				for (let i = 0; i < count; i++) {
+					container.appendChild(createRow());
+				}
+			}
+
+			// --- Pop Logic ---
+
+			function playPopSound() {
+				popSound.currentTime = 0; // Reset playback to allow rapid pops
+				popSound
+					.play()
+					.catch((error) =>
+						console.error("Audio play failed:", error)
+					); // Play sound, handle potential errors
+			}
+
+			function popBubble(bubbleElement) {
+				if (
+					!bubbleElement ||
+					bubbleElement.classList.contains("popped")
+				) {
+					return; // Already popped or invalid element
+				}
+
+				bubbleElement.classList.add("popping"); // Add animation class
+				playPopSound();
+
+				// Use setTimeout to apply 'popped' after the animation starts
+				// and remove 'popping' after animation completes
+				setTimeout(() => {
+					bubbleElement.classList.add("popped");
+					bubbleElement.style.cursor = "default"; // Explicitly set cursor
+					// Remove event listener after popping
+					bubbleElement.removeEventListener(
+						"click",
+						handleBubbleClick
+					);
+				}, 50); // Delay slightly less than animation duration
+
+				setTimeout(() => {
+					bubbleElement.classList.remove("popping");
+					// Check if the row needs to be scrolled AFTER the pop animation settles
+					checkAndScroll();
+				}, 150); // Match animation duration
+			}
+
+			function handleBubbleClick(event) {
+				// Check if the clicked element is indeed a bubble and not already popped
+				if (
+					event.target.classList.contains("bubble") &&
+					!event.target.classList.contains("popped")
+				) {
+					popBubble(event.target);
+				}
+			}
+
+			function popRandomBubble() {
+				const unpoppedBubbles = container.querySelectorAll(
+					".bubble:not(.popped)"
+				);
+				if (unpoppedBubbles.length > 0) {
+					const randomIndex = Math.floor(
+						Math.random() * unpoppedBubbles.length
+					);
+					popBubble(unpoppedBubbles[randomIndex]);
+				}
+			}
+
+			// --- Scroll Logic ---
+
+			function checkAndScroll() {
+				const firstRow = container.querySelector(".bubble-row");
+				if (!firstRow) return; // No rows left
+
+				const bubblesInFirstRow = firstRow.querySelectorAll(".bubble");
+				let allPopped = true;
+				bubblesInFirstRow.forEach((bubble) => {
+					if (!bubble.classList.contains("popped")) {
+						allPopped = false;
+					}
+				});
+
+				if (allPopped) {
+					// Add a subtle transition effect for removal (optional)
+					firstRow.style.transition =
+						"opacity 0.3s ease-out, transform 0.3s ease-out";
+					firstRow.style.opacity = "0";
+					firstRow.style.transform = "translateY(-20px)";
+
+					setTimeout(() => {
+						firstRow.remove(); // Remove the fully popped top row
+						addRows(1); // Add a new row at the bottom
+					}, 300); // Delay removal until after transition
+				}
+			}
+
+			// --- Event Listeners ---
+
+			// Spacebar listener
+			document.addEventListener("keydown", (event) => {
+				if (event.code === "Space") {
+					event.preventDefault(); // Prevent page scrolling
+					popRandomBubble();
+				}
+			});
+
+			// --- Initialization ---
+			function initialize() {
+				// Calculate initial rows based on viewport height for better coverage
+				const bubbleHeight = 50 + 10 + 10; // Approx height + margins + row margin
+				const containerHeight = window.innerHeight * 0.9; // Use approx container height
+				const dynamicInitialRows = Math.max(
+					INITIAL_ROWS,
+					Math.ceil(containerHeight / bubbleHeight) + 3
+				); // Add a buffer
+
+				addRows(dynamicInitialRows);
+
+				// Adjust number of bubbles per row based on container width
+				// This is a bit trickier and might need refinement based on exact styling
+				// For simplicity, we'll stick to the fixed BUBBLES_PER_ROW for now.
+			}
+
+			// Start the app
+			initialize();
+		</script>
+	</body>
+</html>
