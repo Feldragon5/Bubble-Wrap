@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Infinite Bubble Wrap</title>
+		<title>Infinite Bubble Wrap V2</title>
 		<style>
 			* {
 				box-sizing: border-box;
@@ -15,82 +15,100 @@
 			body {
 				height: 100%;
 				overflow: hidden; /* Prevent body scroll */
-				background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+				background: linear-gradient(
+					135deg,
+					#89f7fe 0%,
+					#66a6ff 100%
+				); /* Cooler gradient */
 				display: flex;
 				justify-content: center;
 				align-items: flex-start; /* Align container to the top */
-				font-family: sans-serif;
+				font-family: "Arial Rounded MT Bold", "Helvetica Rounded", Arial,
+					sans-serif; /* Bubbly font */
 			}
 
 			#info {
 				position: fixed;
 				top: 10px;
-				left: 10px;
-				background-color: rgba(0, 0, 0, 0.5);
+				left: 50%;
+				transform: translateX(-50%); /* Center horizontally */
+				background-color: rgba(0, 0, 0, 0.6);
 				color: white;
-				padding: 5px 10px;
-				border-radius: 5px;
-				font-size: 0.9em;
+				padding: 8px 15px;
+				border-radius: 15px;
+				font-size: 1em;
 				z-index: 100;
+				box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 			}
 
 			#bubble-wrap-container {
-				padding-top: 20px; /* Space from top */
-				padding-bottom: 50px; /* Extra space at bottom */
-				width: 90%;
-				max-width: 600px; /* Max width for larger screens */
+				padding-top: 50px; /* More space for info text */
+				padding-bottom: 100px; /* Extra space at bottom */
+				width: 95%; /* Use more screen width */
+				max-width: 1000px; /* Allow wider max */
 				height: 100%;
 				overflow-y: hidden; /* Hide vertical scrollbar, managed by JS */
 				display: flex;
 				flex-direction: column;
 				align-items: center;
-				/* The illusion of scrolling is handled by removing top rows and adding bottom rows */
+				/* Scrolling illusion by removing/adding rows */
 			}
 
 			.bubble-row {
 				display: flex;
 				justify-content: center;
-				margin-bottom: 10px; /* Spacing between rows */
-				flex-shrink: 0; /* Prevent rows from shrinking */
+				margin-bottom: 15px; /* Increased spacing for bigger bubbles */
+				flex-shrink: 0;
 				width: 100%;
+				/* transition: transform 0.5s ease-out, opacity 0.5s ease-out; */ /* Transition for row removal */
 			}
 
 			.bubble {
-				width: 50px;
-				height: 50px;
+				/* --- Bigger Bubbles --- */
+				width: 80px;
+				height: 80px;
+				margin: 8px;
+				/* --- Styling --- */
 				background: radial-gradient(
 					circle at 35% 35%,
-					rgba(255, 255, 255, 0.8),
-					rgba(180, 200, 255, 0.4)
+					rgba(255, 255, 255, 0.9),
+					rgba(180, 220, 255, 0.5)
 				);
 				border-radius: 50%;
-				margin: 5px;
 				cursor: pointer;
 				transition: background 0.2s ease-out, transform 0.1s ease;
-				box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2),
-					inset 0px 1px 3px rgba(255, 255, 255, 0.6);
-				position: relative; /* For pseudo-elements if needed */
-				user-select: none; /* Prevent text selection */
+				box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.25),
+					inset 0px 2px 5px rgba(255, 255, 255, 0.7);
+				position: relative;
+				user-select: none;
 				-webkit-user-select: none;
 				-moz-user-select: none;
 				-ms-user-select: none;
+				flex-shrink: 0; /* Prevent bubbles shrinking in flex row */
 			}
 
 			.bubble:hover:not(.popped) {
-				transform: scale(1.05);
+				transform: scale(1.04); /* Subtle hover */
 			}
 			.bubble:active:not(.popped) {
-				transform: scale(0.95);
+				transform: scale(0.96); /* Subtle press */
 			}
 
 			.bubble.popped {
-				background: rgba(150, 170, 220, 0.2);
+				/* --- Keep original size --- */
+				transform: scale(1);
+				/* --- Visual change for popped state --- */
+				background: rgba(
+					100,
+					140,
+					200,
+					0.15
+				); /* More subdued background */
 				cursor: default;
-				box-shadow: inset 0px 1px 4px rgba(0, 0, 0, 0.2);
-				transform: scale(0.9); /* Make it look slightly deflated */
+				box-shadow: inset 0px 2px 6px rgba(0, 0, 0, 0.3); /* Inset shadow for 'hole' effect */
 			}
 
-			/* Simple Pop Animation */
+			/* Pop Animation */
 			.bubble.popping {
 				animation: pop-animation 0.15s ease-out forwards;
 			}
@@ -101,25 +119,32 @@
 					opacity: 1;
 				}
 				50% {
-					transform: scale(1.15); /* Slightly expand */
-					opacity: 0.8;
+					transform: scale(1.1); /* Slightly expand */
+					opacity: 0.9;
+					box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.3),
+						inset 0px 2px 5px rgba(255, 255, 255, 0.6);
 				}
 				100% {
-					transform: scale(0.9); /* Settle into popped state */
-					opacity: 1; /* Fade back slightly */
-					background: rgba(
-						150,
-						170,
-						220,
-						0.2
-					); /* Ensure final popped background */
-					box-shadow: inset 0px 1px 4px rgba(0, 0, 0, 0.2); /* Ensure final popped shadow */
+					/* --- End state matches .popped but at scale 1 --- */
+					transform: scale(1);
+					opacity: 1;
+					background: rgba(100, 140, 200, 0.15);
+					box-shadow: inset 0px 2px 6px rgba(0, 0, 0, 0.3);
 				}
+			}
+
+			/* Subtle row removal animation */
+			.bubble-row.removing {
+				transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+				opacity: 0;
+				transform: translateY(-30px) scale(0.95);
 			}
 		</style>
 	</head>
 	<body>
-		<div id="info">Click bubbles or press SPACE to pop!</div>
+		<div id="info">
+			Click bubbles or press SPACE (visible ones only) to pop!
+		</div>
 		<div id="bubble-wrap-container">
 			<!-- Bubbles will be generated here by JavaScript -->
 		</div>
@@ -134,17 +159,45 @@
 		<script>
 			const container = document.getElementById("bubble-wrap-container");
 			const popSound = document.getElementById("pop-sound");
-			const BUBBLES_PER_ROW = 8; // Adjust based on desired width/bubble size
-			const INITIAL_ROWS = 15; // Number of rows to start with
+
+			// --- Configuration (Dynamic) ---
+			const BUBBLE_SIZE_CSS = 80; // px - MUST MATCH CSS width/height
+			const BUBBLE_MARGIN_CSS = 8; // px - MUST MATCH CSS margin
+			const ROW_MARGIN_BOTTOM_CSS = 15; // px - MUST MATCH CSS margin-bottom
+
+			let BUBBLES_PER_ROW = calculateBubblesPerRow(); // Calculate dynamically
+			const INITIAL_ROWS = calculateInitialRows(); // Calculate dynamically
 
 			let bubbleCount = 0; // Unique ID for bubbles
 
-			// --- Bubble Creation ---
+			// --- Dynamic Calculation ---
+			function calculateBubblesPerRow() {
+				const containerWidth = container.clientWidth;
+				// Calculate total space one bubble takes horizontally
+				const bubbleTotalWidth =
+					BUBBLE_SIZE_CSS + BUBBLE_MARGIN_CSS * 2;
+				if (containerWidth <= 0 || bubbleTotalWidth <= 0) return 5; // Fallback
+				// Calculate how many fit and take the floor
+				const count = Math.floor(containerWidth / bubbleTotalWidth);
+				return Math.max(1, count); // Ensure at least 1 bubble per row
+			}
 
+			function calculateInitialRows() {
+				const bubbleTotalHeight =
+					BUBBLE_SIZE_CSS +
+					BUBBLE_MARGIN_CSS * 2 +
+					ROW_MARGIN_BOTTOM_CSS;
+				const containerHeight = window.innerHeight; // Use viewport height
+				const dynamicInitialRows =
+					Math.ceil(containerHeight / bubbleTotalHeight) + 5; // Add a buffer
+				return Math.max(10, dynamicInitialRows); // Ensure a minimum number
+			}
+
+			// --- Bubble Creation ---
 			function createBubble() {
 				const bubble = document.createElement("div");
 				bubble.classList.add("bubble");
-				bubble.dataset.id = `bubble-${bubbleCount++}`; // Assign unique ID (optional)
+				bubble.dataset.id = `bubble-${bubbleCount++}`;
 				bubble.addEventListener("click", handleBubbleClick);
 				return bubble;
 			}
@@ -152,6 +205,7 @@
 			function createRow() {
 				const row = document.createElement("div");
 				row.classList.add("bubble-row");
+				// Use the dynamically calculated number
 				for (let i = 0; i < BUBBLES_PER_ROW; i++) {
 					row.appendChild(createBubble());
 				}
@@ -165,14 +219,13 @@
 			}
 
 			// --- Pop Logic ---
-
 			function playPopSound() {
-				popSound.currentTime = 0; // Reset playback to allow rapid pops
+				popSound.currentTime = 0;
 				popSound
 					.play()
 					.catch((error) =>
-						console.error("Audio play failed:", error)
-					); // Play sound, handle potential errors
+						console.warn("Audio play interrupted or failed:", error)
+					);
 			}
 
 			function popBubble(bubbleElement) {
@@ -180,33 +233,31 @@
 					!bubbleElement ||
 					bubbleElement.classList.contains("popped")
 				) {
-					return; // Already popped or invalid element
+					return false; // Indicate already popped or invalid
 				}
 
-				bubbleElement.classList.add("popping"); // Add animation class
+				bubbleElement.classList.add("popping");
 				playPopSound();
 
-				// Use setTimeout to apply 'popped' after the animation starts
-				// and remove 'popping' after animation completes
 				setTimeout(() => {
 					bubbleElement.classList.add("popped");
-					bubbleElement.style.cursor = "default"; // Explicitly set cursor
-					// Remove event listener after popping
+					bubbleElement.style.cursor = "default";
 					bubbleElement.removeEventListener(
 						"click",
 						handleBubbleClick
 					);
-				}, 50); // Delay slightly less than animation duration
+				}, 50); // Short delay before adding final state
 
 				setTimeout(() => {
 					bubbleElement.classList.remove("popping");
-					// Check if the row needs to be scrolled AFTER the pop animation settles
-					checkAndScroll();
-				}, 150); // Match animation duration
+					// Check for row removal AFTER animation settles
+					checkAndAdvanceRows();
+				}, 150); // Animation duration
+
+				return true; // Indicate successful pop start
 			}
 
 			function handleBubbleClick(event) {
-				// Check if the clicked element is indeed a bubble and not already popped
 				if (
 					event.target.classList.contains("bubble") &&
 					!event.target.classList.contains("popped")
@@ -215,71 +266,123 @@
 				}
 			}
 
-			function popRandomBubble() {
-				const unpoppedBubbles = container.querySelectorAll(
+			// --- Visibility Check ---
+			function isElementInViewport(el) {
+				const rect = el.getBoundingClientRect();
+				const containerRect = container.getBoundingClientRect(); // Use container bounds
+
+				// Check if element top is below container top AND element bottom is above container bottom
+				// This checks vertical visibility within the #bubble-wrap-container
+				return (
+					rect.top >= containerRect.top &&
+					rect.bottom <= containerRect.bottom + 5 // Add small tolerance
+				);
+			}
+
+			// --- Random Pop (Visible Only) ---
+			function popRandomVisibleBubble() {
+				const allUnpoppedBubbles = container.querySelectorAll(
 					".bubble:not(.popped)"
 				);
-				if (unpoppedBubbles.length > 0) {
+				// Filter for visible ones
+				const visibleUnpoppedBubbles =
+					Array.from(allUnpoppedBubbles).filter(isElementInViewport);
+
+				if (visibleUnpoppedBubbles.length > 0) {
 					const randomIndex = Math.floor(
-						Math.random() * unpoppedBubbles.length
+						Math.random() * visibleUnpoppedBubbles.length
 					);
-					popBubble(unpoppedBubbles[randomIndex]);
+					popBubble(visibleUnpoppedBubbles[randomIndex]);
+				} else {
+					console.log(
+						"No visible unpopped bubbles to pop with spacebar."
+					);
 				}
 			}
 
-			// --- Scroll Logic ---
+			// --- Row Advancement (Multiple) ---
+			function checkAndAdvanceRows() {
+				let rowsRemovedCount = 0;
+				let firstRow = container.querySelector(".bubble-row"); // Get the current top row
 
-			function checkAndScroll() {
-				const firstRow = container.querySelector(".bubble-row");
-				if (!firstRow) return; // No rows left
-
-				const bubblesInFirstRow = firstRow.querySelectorAll(".bubble");
-				let allPopped = true;
-				bubblesInFirstRow.forEach((bubble) => {
-					if (!bubble.classList.contains("popped")) {
-						allPopped = false;
+				// Loop while there is a top row
+				while (firstRow) {
+					const bubblesInRow = firstRow.querySelectorAll(".bubble");
+					if (bubblesInRow.length === 0) {
+						// Should not happen, but safety check
+						firstRow.remove();
+						firstRow = container.querySelector(".bubble-row"); // Get next row
+						continue;
 					}
-				});
 
-				if (allPopped) {
-					// Add a subtle transition effect for removal (optional)
-					firstRow.style.transition =
-						"opacity 0.3s ease-out, transform 0.3s ease-out";
-					firstRow.style.opacity = "0";
-					firstRow.style.transform = "translateY(-20px)";
+					let allPopped = true;
+					bubblesInRow.forEach((bubble) => {
+						if (!bubble.classList.contains("popped")) {
+							allPopped = false;
+						}
+					});
 
-					setTimeout(() => {
-						firstRow.remove(); // Remove the fully popped top row
-						addRows(1); // Add a new row at the bottom
-					}, 300); // Delay removal until after transition
+					if (allPopped) {
+						// Apply removal class for animation
+						firstRow.classList.add("removing");
+						const rowToRemove = firstRow; // Store reference for timeout
+
+						// Remove the row after animation
+						setTimeout(() => {
+							rowToRemove.remove();
+						}, 300); // Match animation duration in CSS (.removing)
+
+						rowsRemovedCount++;
+						firstRow = container.querySelector(
+							".bubble-row:not(.removing)"
+						); // Find next row that isn't already being removed
+					} else {
+						// Found a row that is not fully popped, stop checking
+						break;
+					}
+				}
+
+				// Add new rows at the bottom if any were removed
+				if (rowsRemovedCount > 0) {
+					addRows(rowsRemovedCount);
+					console.log(
+						`Removed ${rowsRemovedCount} rows, added ${rowsRemovedCount} new rows.`
+					);
 				}
 			}
 
 			// --- Event Listeners ---
-
-			// Spacebar listener
 			document.addEventListener("keydown", (event) => {
 				if (event.code === "Space") {
-					event.preventDefault(); // Prevent page scrolling
-					popRandomBubble();
+					event.preventDefault();
+					popRandomVisibleBubble();
 				}
+			});
+
+			// Recalculate on resize (optional, might cause layout shifts)
+			let resizeTimeout;
+			window.addEventListener("resize", () => {
+				clearTimeout(resizeTimeout);
+				resizeTimeout = setTimeout(() => {
+					// Note: Recalculating bubbles per row on resize dynamically
+					// can be complex if rows already exist. A full refresh
+					// might be simpler or just accept the current layout.
+					// For this version, we won't dynamically re-layout existing rows.
+					// We'll just update the calculation for *future* rows if needed.
+					BUBBLES_PER_ROW = calculateBubblesPerRow();
+					console.log(
+						"Recalculated bubbles per row on resize:",
+						BUBBLES_PER_ROW
+					);
+				}, 250); // Debounce resize event
 			});
 
 			// --- Initialization ---
 			function initialize() {
-				// Calculate initial rows based on viewport height for better coverage
-				const bubbleHeight = 50 + 10 + 10; // Approx height + margins + row margin
-				const containerHeight = window.innerHeight * 0.9; // Use approx container height
-				const dynamicInitialRows = Math.max(
-					INITIAL_ROWS,
-					Math.ceil(containerHeight / bubbleHeight) + 3
-				); // Add a buffer
-
-				addRows(dynamicInitialRows);
-
-				// Adjust number of bubbles per row based on container width
-				// This is a bit trickier and might need refinement based on exact styling
-				// For simplicity, we'll stick to the fixed BUBBLES_PER_ROW for now.
+				console.log(
+					`Initial calculation: ${BUBBLES_PER_ROW} bubbles/row, ${INITIAL_ROWS} initial rows.`
+				);
+				addRows(INITIAL_ROWS);
 			}
 
 			// Start the app
