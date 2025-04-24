@@ -3,114 +3,138 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Infinite Bubble Wrap V2</title>
+		<title>Bubble Wrap</title>
 		<style>
+			:root {
+				/* Layout & Base Style Variables */
+				--bubble-size: 60px;
+				--bubble-margin-h: 5px; /* Calculated margin */
+				--bubble-margin-v: 3px; /* Fixed vertical margin */
+				--stagger-offset: -35px; /* Calculated offset */
+				--row-margin-bottom: 3px;
+
+				/* Animation Durations */
+				--bubble-pop-duration: 0.15s;
+				--bubble-shrink-duration: 0.25s;
+				--row-collapse-duration: 0.3s;
+				--particle-duration: 0.7s;
+			}
+
 			* {
 				box-sizing: border-box;
 				margin: 0;
 				padding: 0;
 			}
+			html {
+				height: 100%;
+				overflow: hidden;
+			}
 
-			html,
 			body {
 				height: 100%;
-				overflow: hidden; /* Prevent body scroll */
-				background: linear-gradient(
-					135deg,
-					#89f7fe 0%,
-					#66a6ff 100%
-				); /* Cooler gradient */
+				overflow-y: hidden;
+				overflow-x: hidden; /* CRITICAL for clipping edges */
+				background: linear-gradient(180deg, #e0f2ff 0%, #f0f8ff 100%);
 				display: flex;
-				justify-content: center;
-				align-items: flex-start; /* Align container to the top */
+				flex-direction: column;
 				font-family: "Arial Rounded MT Bold", "Helvetica Rounded", Arial,
-					sans-serif; /* Bubbly font */
+					sans-serif;
+				padding: 0; /* No body padding */
+				padding-bottom: 80px; /* Keep bottom buffer */
+				-webkit-tap-highlight-color: transparent; /* Prevent mobile tap highlight */
+				position: relative; /* Needed for absolute particle positioning */
+				/* Prevent text selection during hold on mobile */
+				-webkit-user-select: none;
+				-moz-user-select: none;
+				-ms-user-select: none;
+				user-select: none;
 			}
 
 			#info {
 				position: fixed;
-				top: 10px;
+				top: 20px;
 				left: 50%;
-				transform: translateX(-50%); /* Center horizontally */
-				background-color: rgba(0, 0, 0, 0.6);
+				transform: translateX(-50%);
+				background-color: rgba(0, 0, 0, 0.75);
 				color: white;
-				padding: 8px 15px;
-				border-radius: 15px;
-				font-size: 1em;
+				padding: 10px 18px;
+				border-radius: 25px;
+				font-size: 0.9em;
 				z-index: 100;
-				box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+				box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+				text-align: center;
+				transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+				opacity: 1;
+				pointer-events: auto;
+				line-height: 1.4;
+				width: 90%; /* Allow wrapping */
+				max-width: 500px; /* Max width for info */
 			}
-
-			#bubble-wrap-container {
-				padding-top: 50px; /* More space for info text */
-				padding-bottom: 100px; /* Extra space at bottom */
-				width: 95%; /* Use more screen width */
-				max-width: 1000px; /* Allow wider max */
-				height: 100%;
-				overflow-y: hidden; /* Hide vertical scrollbar, managed by JS */
-				display: flex;
-				flex-direction: column;
-				align-items: center;
-				/* Scrolling illusion by removing/adding rows */
+			#info b {
+				display: block;
+				margin-bottom: 3px;
+			}
+			#info.hidden {
+				opacity: 0;
+				transform: translate(-50%, -20px);
+				pointer-events: none;
 			}
 
 			.bubble-row {
 				display: flex;
-				justify-content: center;
-				margin-bottom: 15px; /* Increased spacing for bigger bubbles */
+				justify-content: flex-start; /* Align left */
+				margin-bottom: var(--row-margin-bottom);
 				flex-shrink: 0;
 				width: 100%;
-				/* transition: transform 0.5s ease-out, opacity 0.5s ease-out; */ /* Transition for row removal */
+				height: calc(var(--bubble-size) + var(--bubble-margin-v) * 2);
+				transition: height var(--row-collapse-duration) ease-in,
+					margin-bottom var(--row-collapse-duration) ease-in,
+					opacity 0.1s linear;
+				overflow: hidden; /* Clip shrinking bubbles */
+			}
+			.bubble-row.staggered-row {
+				transform: translateX(var(--stagger-offset));
 			}
 
 			.bubble {
-				/* --- Bigger Bubbles --- */
-				width: 80px;
-				height: 80px;
-				margin: 8px;
-				/* --- Styling --- */
+				width: var(--bubble-size);
+				height: var(--bubble-size);
+				margin: var(--bubble-margin-v) var(--bubble-margin-h);
 				background: radial-gradient(
-					circle at 35% 35%,
-					rgba(255, 255, 255, 0.9),
-					rgba(180, 220, 255, 0.5)
+					circle at 30% 30%,
+					rgba(255, 255, 255, 0.95) 0%,
+					rgba(230, 245, 255, 0.7) 50%,
+					rgba(200, 225, 250, 0.3) 100%
 				);
 				border-radius: 50%;
 				cursor: pointer;
 				transition: background 0.2s ease-out, transform 0.1s ease;
-				box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.25),
-					inset 0px 2px 5px rgba(255, 255, 255, 0.7);
+				box-shadow: 0px 2px 5px rgba(0, 80, 150, 0.25),
+					inset 0px 1px 2px rgba(255, 255, 255, 0.6);
 				position: relative;
-				user-select: none;
-				-webkit-user-select: none;
-				-moz-user-select: none;
-				-ms-user-select: none;
-				flex-shrink: 0; /* Prevent bubbles shrinking in flex row */
+				/* User select handled by body */
+				flex-shrink: 0;
+				opacity: 1;
+				transform: scale(1);
 			}
-
-			.bubble:hover:not(.popped) {
-				transform: scale(1.04); /* Subtle hover */
+			/* Don't show hover on touch devices where practical */
+			@media (hover: hover) and (pointer: fine) {
+				.bubble:hover:not(.popped) {
+					transform: scale(1.03);
+				}
 			}
 			.bubble:active:not(.popped) {
-				transform: scale(0.96); /* Subtle press */
-			}
-
+				transform: scale(0.97);
+			} /* Active works for both */
 			.bubble.popped {
-				/* --- Keep original size --- */
 				transform: scale(1);
-				/* --- Visual change for popped state --- */
-				background: rgba(
-					100,
-					140,
-					200,
-					0.15
-				); /* More subdued background */
+				background: rgba(220, 235, 250, 0.2);
 				cursor: default;
-				box-shadow: inset 0px 2px 6px rgba(0, 0, 0, 0.3); /* Inset shadow for 'hole' effect */
+				box-shadow: inset 0px 2px 4px rgba(0, 50, 100, 0.25);
 			}
-
-			/* Pop Animation */
 			.bubble.popping {
-				animation: pop-animation 0.15s ease-out forwards;
+				animation: pop-animation var(--bubble-pop-duration) ease-out
+					forwards;
 			}
 
 			@keyframes pop-animation {
@@ -119,37 +143,82 @@
 					opacity: 1;
 				}
 				50% {
-					transform: scale(1.1); /* Slightly expand */
+					transform: scale(1.05);
 					opacity: 0.9;
-					box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.3),
-						inset 0px 2px 5px rgba(255, 255, 255, 0.6);
 				}
 				100% {
-					/* --- End state matches .popped but at scale 1 --- */
 					transform: scale(1);
 					opacity: 1;
-					background: rgba(100, 140, 200, 0.15);
-					box-shadow: inset 0px 2px 6px rgba(0, 0, 0, 0.3);
+					background: rgba(220, 235, 250, 0.2);
+					box-shadow: inset 0px 2px 4px rgba(0, 50, 100, 0.25);
+				}
+			}
+			@keyframes shrink-fade-out {
+				0% {
+					transform: scale(1) translateY(0);
+					opacity: 1;
+				}
+				100% {
+					transform: scale(0) translateY(-10px);
+					opacity: 0;
+				}
+			}
+			.bubble.shrinking {
+				animation: shrink-fade-out var(--bubble-shrink-duration) ease-in
+					forwards;
+			}
+			.bubble-row.removing {
+				height: 0;
+				margin-bottom: 0;
+				opacity: 0;
+			}
+
+			/* --- Particle Effect --- */
+			.particle {
+				position: absolute;
+				width: 10px;
+				height: 10px;
+				background-color: rgba(255, 255, 255, 0.85);
+				border-radius: 50%;
+				pointer-events: none;
+				opacity: 1;
+				--tx: 0px;
+				--ty: 0px;
+				animation: particle-fly-out var(--particle-duration) ease-out
+					forwards;
+				will-change: transform, opacity;
+			}
+			@keyframes particle-fly-out {
+				0% {
+					transform: translate(0, 0) scale(1);
+					opacity: 1;
+				}
+				100% {
+					transform: translate(var(--tx), var(--ty)) scale(0);
+					opacity: 0;
 				}
 			}
 
-			/* Subtle row removal animation */
-			.bubble-row.removing {
-				transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-				opacity: 0;
-				transform: translateY(-30px) scale(0.95);
+			/* --- Media query --- */
+			@media (max-width: 768px) {
+				/* Mobile Breakpoint */
+				#info {
+					font-size: 0.8em;
+					padding: 8px 15px;
+				}
+				.particle {
+					width: 7px;
+					height: 7px;
+				}
+				/* Adjust base CSS variables for mobile if needed */
+				/* :root { --bubble-size: 50px; } */
 			}
 		</style>
 	</head>
 	<body>
 		<div id="info">
-			Click bubbles or press SPACE (visible ones only) to pop!
+			<!-- Content set by JavaScript -->
 		</div>
-		<div id="bubble-wrap-container">
-			<!-- Bubbles will be generated here by JavaScript -->
-		</div>
-
-		<!-- Pop Sound -->
 		<audio
 			id="pop-sound"
 			src="https://cdn.freesound.org/previews/316/316934_5121236-lq.mp3"
@@ -157,235 +226,573 @@
 		></audio>
 
 		<script>
-			const container = document.getElementById("bubble-wrap-container");
+			const bubbleContainer = document.body;
 			const popSound = document.getElementById("pop-sound");
+			const infoElement = document.getElementById("info");
+			const root = document.documentElement;
 
-			// --- Configuration (Dynamic) ---
-			const BUBBLE_SIZE_CSS = 80; // px - MUST MATCH CSS width/height
-			const BUBBLE_MARGIN_CSS = 8; // px - MUST MATCH CSS margin
-			const ROW_MARGIN_BOTTOM_CSS = 15; // px - MUST MATCH CSS margin-bottom
+			// --- NEW: Constants for Breakpoint and Instructions ---
+			const MOBILE_BREAKPOINT = 768; // px width
+			const DESKTOP_INSTRUCTIONS = `
+                <b>CLICK or hold SPACE to pop bubbles.</b>
+            `;
+			const MOBILE_INSTRUCTIONS = `
+                <b>Tap bubbles to pop them. Hold to pop continuously.</b>
+            `;
+			let isMobileMode = false; // State variable for current mode
 
-			let BUBBLES_PER_ROW = calculateBubblesPerRow(); // Calculate dynamically
-			const INITIAL_ROWS = calculateInitialRows(); // Calculate dynamically
-
-			let bubbleCount = 0; // Unique ID for bubbles
-
-			// --- Dynamic Calculation ---
-			function calculateBubblesPerRow() {
-				const containerWidth = container.clientWidth;
-				// Calculate total space one bubble takes horizontally
-				const bubbleTotalWidth =
-					BUBBLE_SIZE_CSS + BUBBLE_MARGIN_CSS * 2;
-				if (containerWidth <= 0 || bubbleTotalWidth <= 0) return 5; // Fallback
-				// Calculate how many fit and take the floor
-				const count = Math.floor(containerWidth / bubbleTotalWidth);
-				return Math.max(1, count); // Ensure at least 1 bubble per row
+			// --- Base Configuration & Calculation Functions ---
+			let BASE_BUBBLE_SIZE = 60;
+			let BASE_BUBBLE_MARGIN_H = 5;
+			let BASE_BUBBLE_MARGIN_V = 3;
+			let BASE_ROW_MARGIN_BOTTOM = 3;
+			function updateBaseConstants() {
+				// Use the detected mode for base sizes
+				if (isMobileMode) {
+					BASE_BUBBLE_SIZE = 50;
+					BASE_BUBBLE_MARGIN_H = 3;
+					BASE_BUBBLE_MARGIN_V = 2;
+				} else {
+					BASE_BUBBLE_SIZE = 60;
+					BASE_BUBBLE_MARGIN_H = 5;
+					BASE_BUBBLE_MARGIN_V = 3;
+				}
 			}
-
+			let bodyPaddingBottom = 0;
+			let BUBBLES_PER_ROW = 1;
+			let calculatedMarginH = BASE_BUBBLE_MARGIN_H;
+			function updateBodyPadding() {
+				const computedStyle = getComputedStyle(bubbleContainer);
+				bodyPaddingBottom =
+					parseFloat(computedStyle.paddingBottom) || 0;
+			}
+			function calculateLayoutProperties() {
+				updateBaseConstants();
+				const availableWidth = window.innerWidth;
+				const bubbleTotalWidthBase =
+					BASE_BUBBLE_SIZE + BASE_BUBBLE_MARGIN_H * 2;
+				if (availableWidth <= 0 || bubbleTotalWidthBase <= 0) {
+					BUBBLES_PER_ROW = 1;
+					calculatedMarginH = BASE_BUBBLE_MARGIN_H;
+					return;
+				}
+				let numFullBubbles = Math.floor(
+					availableWidth / bubbleTotalWidthBase
+				);
+				numFullBubbles = Math.max(1, numFullBubbles);
+				const widthUsedAtMinMargin =
+					numFullBubbles * bubbleTotalWidthBase;
+				const remainingSpace = availableWidth - widthUsedAtMinMargin;
+				let extraMarginPerSide = 0;
+				if (numFullBubbles > 0 && remainingSpace > 0) {
+					extraMarginPerSide = remainingSpace / (numFullBubbles * 2);
+				}
+				calculatedMarginH = BASE_BUBBLE_MARGIN_H + extraMarginPerSide;
+				BUBBLES_PER_ROW = numFullBubbles;
+				const staggerOffset = -(
+					BASE_BUBBLE_SIZE / 2 +
+					calculatedMarginH
+				);
+				root.style.setProperty(
+					"--bubble-size",
+					`${BASE_BUBBLE_SIZE}px`
+				);
+				root.style.setProperty(
+					"--bubble-margin-h",
+					`${calculatedMarginH}px`
+				);
+				root.style.setProperty(
+					"--bubble-margin-v",
+					`${BASE_BUBBLE_MARGIN_V}px`
+				);
+				root.style.setProperty(
+					"--stagger-offset",
+					`${staggerOffset}px`
+				);
+				root.style.setProperty(
+					"--row-margin-bottom",
+					`${BASE_ROW_MARGIN_BOTTOM}px`
+				);
+				root.style.setProperty("--bubble-pop-duration", "0.15s");
+				root.style.setProperty("--bubble-shrink-duration", "0.25s");
+				root.style.setProperty("--row-collapse-duration", "0.3s");
+				root.style.setProperty("--particle-duration", "0.7s");
+			}
 			function calculateInitialRows() {
 				const bubbleTotalHeight =
-					BUBBLE_SIZE_CSS +
-					BUBBLE_MARGIN_CSS * 2 +
-					ROW_MARGIN_BOTTOM_CSS;
-				const containerHeight = window.innerHeight; // Use viewport height
+					BASE_BUBBLE_SIZE +
+					BASE_BUBBLE_MARGIN_V * 2 +
+					BASE_ROW_MARGIN_BOTTOM;
+				const availableHeight = window.innerHeight - bodyPaddingBottom;
+				if (availableHeight <= 0 || bubbleTotalHeight <= 0) return 15;
 				const dynamicInitialRows =
-					Math.ceil(containerHeight / bubbleTotalHeight) + 5; // Add a buffer
-				return Math.max(10, dynamicInitialRows); // Ensure a minimum number
+					Math.ceil(availableHeight / bubbleTotalHeight) + 10;
+				return Math.max(10, dynamicInitialRows);
 			}
 
-			// --- Bubble Creation ---
+			// --- Global state ---
+			let infoVisible = true;
+			let currentRowIndex = 0;
+
+			// --- State & Constants for Hold Controls ---
+			let isInputDown = false;
+			let holdStartTimeoutId = null;
+			let popIntervalId = null;
+			let currentPopIntervalMs = 0;
+			const INITIAL_HOLD_DELAY_MS = 350;
+			const INITIAL_TOUCH_HOLD_DELAY_MS = 1500;
+			const STARTING_POP_INTERVAL_MS = 180;
+			const MIN_POP_INTERVAL_MS = 45;
+			const POP_RAMP_MULTIPLIER = 0.92;
+			const POP_INTERVAL_RAMP_INTERVAL = 2;
+			let popRampCounter = 0;
+
+			// --- Particle Config ---
+			const PARTICLE_COUNT = 12;
+			const PARTICLE_SPREAD = 70;
+
+			// --- Bubble & Row Creation ---
 			function createBubble() {
 				const bubble = document.createElement("div");
 				bubble.classList.add("bubble");
-				bubble.dataset.id = `bubble-${bubbleCount++}`;
-				bubble.addEventListener("click", handleBubbleClick);
-				return bubble;
+				/* Click listener added dynamically */ return bubble;
 			}
-
-			function createRow() {
+			function createRow(isStaggered) {
 				const row = document.createElement("div");
 				row.classList.add("bubble-row");
-				// Use the dynamically calculated number
-				for (let i = 0; i < BUBBLES_PER_ROW; i++) {
+				let bubblesToAdd = BUBBLES_PER_ROW;
+				if (isStaggered) {
+					row.classList.add("staggered-row");
+					bubblesToAdd = BUBBLES_PER_ROW + 1;
+				}
+				for (let i = 0; i < bubblesToAdd; i++) {
 					row.appendChild(createBubble());
 				}
 				return row;
 			}
-
 			function addRows(count) {
 				for (let i = 0; i < count; i++) {
-					container.appendChild(createRow());
+					const isStaggered = currentRowIndex % 2 !== 0;
+					bubbleContainer.appendChild(createRow(isStaggered));
+					currentRowIndex++;
 				}
 			}
-
-			// --- Pop Logic ---
+			function clearAllRows() {
+				const rows = bubbleContainer.querySelectorAll(".bubble-row");
+				rows.forEach((row) => row.remove());
+				currentRowIndex = 0;
+			}
+			function hideInfo() {
+				if (infoVisible) {
+					infoElement.classList.add("hidden");
+					infoVisible = false;
+				}
+			}
 			function playPopSound() {
 				popSound.currentTime = 0;
-				popSound
-					.play()
-					.catch((error) =>
-						console.warn("Audio play interrupted or failed:", error)
-					);
+				popSound.play().catch((error) => {});
 			}
 
+			// --- Pop Bubble (with Particle Effect) ---
 			function popBubble(bubbleElement) {
-				if (
+				/* ... unchanged from previous ... */ if (
 					!bubbleElement ||
 					bubbleElement.classList.contains("popped")
-				) {
-					return false; // Indicate already popped or invalid
-				}
-
+				)
+					return false;
+				hideInfo();
 				bubbleElement.classList.add("popping");
 				playPopSound();
-
-				setTimeout(() => {
-					bubbleElement.classList.add("popped");
-					bubbleElement.style.cursor = "default";
-					bubbleElement.removeEventListener(
-						"click",
-						handleBubbleClick
-					);
-				}, 50); // Short delay before adding final state
-
+				bubbleElement.classList.add("popped");
+				bubbleElement.style.cursor = "default";
+				bubbleElement.removeEventListener("click", handleBubbleClick);
+				/* Remove specific listener */ const rect =
+					bubbleElement.getBoundingClientRect();
+				const bubbleCenterX = rect.left + rect.width / 2;
+				const bubbleCenterY = rect.top + rect.height / 2;
+				const particleDurationMs =
+					parseFloat(
+						getComputedStyle(root).getPropertyValue(
+							"--particle-duration"
+						) || "0.7"
+					) * 1000;
+				for (let i = 0; i < PARTICLE_COUNT; i++) {
+					const particle = document.createElement("div");
+					particle.classList.add("particle");
+					const angle = Math.random() * Math.PI * 2;
+					const distance = Math.random() * PARTICLE_SPREAD;
+					const targetX = Math.cos(angle) * distance;
+					const targetY = Math.sin(angle) * distance;
+					particle.style.left = `${bubbleCenterX}px`;
+					particle.style.top = `${bubbleCenterY}px`;
+					particle.style.setProperty("--tx", `${targetX}px`);
+					particle.style.setProperty("--ty", `${targetY}px`);
+					document.body.appendChild(particle);
+					setTimeout(() => {
+						particle.remove();
+					}, particleDurationMs);
+				}
+				const popDurationMs =
+					parseFloat(
+						getComputedStyle(root).getPropertyValue(
+							"--bubble-pop-duration"
+						) || "0.15"
+					) * 1000;
 				setTimeout(() => {
 					bubbleElement.classList.remove("popping");
-					// Check for row removal AFTER animation settles
-					checkAndAdvanceRows();
-				}, 150); // Animation duration
-
-				return true; // Indicate successful pop start
+					setTimeout(checkAndAdvanceRows, 50);
+				}, popDurationMs);
+				return true;
 			}
 
-			function handleBubbleClick(event) {
-				if (
-					event.target.classList.contains("bubble") &&
-					!event.target.classList.contains("popped")
-				) {
-					popBubble(event.target);
-				}
-			}
-
-			// --- Visibility Check ---
+			// --- Visibility Check & Random Pop ---
 			function isElementInViewport(el) {
 				const rect = el.getBoundingClientRect();
-				const containerRect = container.getBoundingClientRect(); // Use container bounds
-
-				// Check if element top is below container top AND element bottom is above container bottom
-				// This checks vertical visibility within the #bubble-wrap-container
+				const vh =
+					window.innerHeight || document.documentElement.clientHeight;
+				const vw =
+					window.innerWidth || document.documentElement.clientWidth;
 				return (
-					rect.top >= containerRect.top &&
-					rect.bottom <= containerRect.bottom + 5 // Add small tolerance
+					rect.top < vh &&
+					rect.bottom > 0 &&
+					rect.left < vw &&
+					rect.right > 0
 				);
 			}
-
-			// --- Random Pop (Visible Only) ---
 			function popRandomVisibleBubble() {
-				const allUnpoppedBubbles = container.querySelectorAll(
+				const allUnpoppedBubbles = bubbleContainer.querySelectorAll(
 					".bubble:not(.popped)"
 				);
-				// Filter for visible ones
 				const visibleUnpoppedBubbles =
 					Array.from(allUnpoppedBubbles).filter(isElementInViewport);
-
 				if (visibleUnpoppedBubbles.length > 0) {
 					const randomIndex = Math.floor(
 						Math.random() * visibleUnpoppedBubbles.length
 					);
 					popBubble(visibleUnpoppedBubbles[randomIndex]);
-				} else {
-					console.log(
-						"No visible unpopped bubbles to pop with spacebar."
-					);
 				}
 			}
 
-			// --- Row Advancement (Multiple) ---
+			// --- Row Advancement ---
 			function checkAndAdvanceRows() {
-				let rowsRemovedCount = 0;
-				let firstRow = container.querySelector(".bubble-row"); // Get the current top row
-
-				// Loop while there is a top row
+				/* ... unchanged from previous ... */ let firstRow =
+					bubbleContainer.querySelector(".bubble-row");
 				while (firstRow) {
-					const bubblesInRow = firstRow.querySelectorAll(".bubble");
-					if (bubblesInRow.length === 0) {
-						// Should not happen, but safety check
-						firstRow.remove();
-						firstRow = container.querySelector(".bubble-row"); // Get next row
+					if (
+						firstRow.classList.contains("removing") ||
+						firstRow.querySelector(".bubble.shrinking")
+					) {
+						firstRow = firstRow.nextElementSibling;
+						if (
+							firstRow &&
+							!firstRow.classList.contains("bubble-row")
+						)
+							firstRow = null;
 						continue;
 					}
-
+					const bubblesInRow = firstRow.querySelectorAll(".bubble");
+					if (bubblesInRow.length === 0) {
+						firstRow.remove();
+						firstRow = bubbleContainer.querySelector(".bubble-row");
+						continue;
+					}
 					let allPopped = true;
 					bubblesInRow.forEach((bubble) => {
-						if (!bubble.classList.contains("popped")) {
+						if (!bubble.classList.contains("popped"))
 							allPopped = false;
-						}
 					});
-
 					if (allPopped) {
-						// Apply removal class for animation
-						firstRow.classList.add("removing");
-						const rowToRemove = firstRow; // Store reference for timeout
-
-						// Remove the row after animation
+						const rowToRemove = firstRow;
+						bubblesInRow.forEach((bubble) =>
+							bubble.classList.add("shrinking")
+						);
+						rowToRemove.classList.add("removing");
+						const removeDelay =
+							parseFloat(
+								getComputedStyle(root).getPropertyValue(
+									"--row-collapse-duration"
+								) || "0.3"
+							) *
+								1000 +
+							50;
 						setTimeout(() => {
 							rowToRemove.remove();
-						}, 300); // Match animation duration in CSS (.removing)
-
-						rowsRemovedCount++;
-						firstRow = container.querySelector(
-							".bubble-row:not(.removing)"
-						); // Find next row that isn't already being removed
+							addRows(1);
+						}, removeDelay);
+						firstRow = firstRow.nextElementSibling;
+						if (
+							firstRow &&
+							!firstRow.classList.contains("bubble-row")
+						)
+							firstRow = null;
 					} else {
-						// Found a row that is not fully popped, stop checking
 						break;
 					}
 				}
+			}
 
-				// Add new rows at the bottom if any were removed
-				if (rowsRemovedCount > 0) {
-					addRows(rowsRemovedCount);
-					console.log(
-						`Removed ${rowsRemovedCount} rows, added ${rowsRemovedCount} new rows.`
-					);
+			// --- Bubble Click/Tap Handler (Common for both modes) ---
+			function handleBubbleClick(event) {
+				// Check if the event target itself is a bubble (safer than classList check on parent)
+				let targetBubble = event.target.closest(".bubble");
+				if (
+					targetBubble &&
+					!targetBubble.classList.contains("popped")
+				) {
+					hideInfo();
+					popBubble(targetBubble);
 				}
 			}
 
-			// --- Event Listeners ---
-			document.addEventListener("keydown", (event) => {
-				if (event.code === "Space") {
-					event.preventDefault();
+			// --- Continuous Pop Logic (Exponential Ramp) ---
+			function startContinuousPop() {
+				if (popIntervalId) clearInterval(popIntervalId);
+				currentPopIntervalMs = STARTING_POP_INTERVAL_MS;
+				popRampCounter = 0;
+				const popAndRamp = () => {
+					if (!isInputDown) {
+						stopContinuousPop();
+						return;
+					}
 					popRandomVisibleBubble();
+					popRampCounter++;
+					if (popRampCounter >= POP_INTERVAL_RAMP_INTERVAL) {
+						popRampCounter = 0;
+						const nextInterval = Math.max(
+							MIN_POP_INTERVAL_MS,
+							currentPopIntervalMs * POP_RAMP_MULTIPLIER
+						);
+						if (nextInterval !== currentPopIntervalMs) {
+							currentPopIntervalMs = nextInterval;
+							clearInterval(popIntervalId);
+							popIntervalId = setInterval(
+								popAndRamp,
+								currentPopIntervalMs
+							);
+						}
+					}
+				};
+				popIntervalId = setInterval(popAndRamp, currentPopIntervalMs);
+			}
+			function stopContinuousPop() {
+				if (holdStartTimeoutId) {
+					clearTimeout(holdStartTimeoutId);
+					holdStartTimeoutId = null;
 				}
-			});
+				if (popIntervalId) {
+					clearInterval(popIntervalId);
+					popIntervalId = null;
+				}
+			}
 
-			// Recalculate on resize (optional, might cause layout shifts)
+			// --- Mode-Specific Event Handlers ---
+			function handleSpaceDown(event) {
+				if (event.code === "Space" && !isInputDown) {
+					event.preventDefault();
+					hideInfo();
+					isInputDown = true;
+					popRandomVisibleBubble();
+					stopContinuousPop();
+					holdStartTimeoutId = setTimeout(() => {
+						if (isInputDown) {
+							startContinuousPop();
+						}
+					}, INITIAL_HOLD_DELAY_MS);
+				}
+			}
+			function handleSpaceUp(event) {
+				if (event.code === "Space") {
+					isInputDown = false;
+					stopContinuousPop();
+				}
+			}
+
+			let touchIdentifier = null;
+			let touchStartX = 0;
+			let touchStartY = 0;
+			function handleTouchHoldStart(event) {
+				if (event.touches.length === 1 && !isInputDown) {
+					hideInfo();
+					isInputDown = true;
+					touchIdentifier = event.touches[0].identifier;
+					touchStartX = event.touches[0].clientX;
+					touchStartY = event.touches[0].clientY;
+					stopContinuousPop();
+					holdStartTimeoutId = setTimeout(() => {
+						if (isInputDown) {
+							startContinuousPop();
+						}
+					}, INITIAL_TOUCH_HOLD_DELAY_MS);
+				}
+			}
+			function handleTouchHoldEnd(event) {
+				let touchEnded = false;
+				for (let i = 0; i < event.changedTouches.length; i++) {
+					if (
+						event.changedTouches[i].identifier === touchIdentifier
+					) {
+						touchEnded = true;
+						break;
+					}
+				}
+				if (touchEnded) {
+					isInputDown = false;
+					touchIdentifier = null;
+					stopContinuousPop();
+				}
+			}
+			function handleTouchHoldMove(event) {
+				if (
+					!isInputDown ||
+					!touchIdentifier ||
+					event.touches.length !== 1 ||
+					event.touches[0].identifier !== touchIdentifier
+				)
+					return;
+				const touch = event.touches[0];
+				const deltaX = Math.abs(touch.clientX - touchStartX);
+				const deltaY = Math.abs(touch.clientY - touchStartY);
+				if (deltaX > 15 || deltaY > 15) {
+					isInputDown = false;
+					touchIdentifier = null;
+					stopContinuousPop();
+				}
+			}
+
+			// --- Update UI and Listeners based on Mode ---
+			function checkAndUpdateMode() {
+				const previousMode = isMobileMode;
+				isMobileMode = window.matchMedia(
+					`(max-width: ${MOBILE_BREAKPOINT}px)`
+				).matches;
+
+				if (isMobileMode !== previousMode || needsInitialSetup) {
+					// Update if mode changed or first run
+					console.log(
+						"Mode changed or initial setup. Mobile:",
+						isMobileMode
+					);
+					updateInfoText();
+					updateEventListeners();
+					stopContinuousPop(); // Stop any active pop on mode change
+					isInputDown = false; // Reset input state
+					needsInitialSetup = false; // Mark setup as done
+					return true; // Indicate mode change happened
+				}
+				return false; // Mode did not change
+			}
+
+			function updateInfoText() {
+				infoElement.innerHTML = isMobileMode
+					? MOBILE_INSTRUCTIONS
+					: DESKTOP_INSTRUCTIONS;
+			}
+
+			function updateEventListeners() {
+				// --- Remove ALL potentially active listeners first ---
+				// Click/Tap on Bubbles (using event delegation on body now)
+				bubbleContainer.removeEventListener("click", handleBubbleClick);
+
+				// Desktop specific
+				document.removeEventListener("keydown", handleSpaceDown);
+				document.removeEventListener("keyup", handleSpaceUp);
+
+				// Mobile specific
+				bubbleContainer.removeEventListener(
+					"touchstart",
+					handleTouchHoldStart
+				);
+				bubbleContainer.removeEventListener(
+					"touchend",
+					handleTouchHoldEnd
+				);
+				bubbleContainer.removeEventListener(
+					"touchcancel",
+					handleTouchHoldEnd
+				);
+				bubbleContainer.removeEventListener(
+					"touchmove",
+					handleTouchHoldMove
+				);
+
+				// --- Add Listeners based on current mode ---
+
+				// Common: Use event delegation for bubble clicks/taps
+				bubbleContainer.addEventListener("click", handleBubbleClick);
+				// Note: On mobile, 'click' fires after 'touchend'.
+				// If we want ONLY tap (touchstart/end) to pop bubbles on mobile,
+				// we could disable the click listener in mobile mode and add
+				// tap detection within handleTouchHoldStart/End. But simple click works.
+
+				if (isMobileMode) {
+					// Mobile Hold Logic
+					bubbleContainer.addEventListener(
+						"touchstart",
+						handleTouchHoldStart,
+						{ passive: true }
+					);
+					bubbleContainer.addEventListener(
+						"touchend",
+						handleTouchHoldEnd
+					);
+					bubbleContainer.addEventListener(
+						"touchcancel",
+						handleTouchHoldEnd
+					);
+					bubbleContainer.addEventListener(
+						"touchmove",
+						handleTouchHoldMove,
+						{ passive: true }
+					);
+				} else {
+					// Desktop Hold Logic
+					document.addEventListener("keydown", handleSpaceDown);
+					document.addEventListener("keyup", handleSpaceUp);
+				}
+			}
+
+			// --- Resize & Initialization ---
+			let needsInitialSetup = true; // Flag for first run
 			let resizeTimeout;
 			window.addEventListener("resize", () => {
 				clearTimeout(resizeTimeout);
 				resizeTimeout = setTimeout(() => {
-					// Note: Recalculating bubbles per row on resize dynamically
-					// can be complex if rows already exist. A full refresh
-					// might be simpler or just accept the current layout.
-					// For this version, we won't dynamically re-layout existing rows.
-					// We'll just update the calculation for *future* rows if needed.
-					BUBBLES_PER_ROW = calculateBubblesPerRow();
-					console.log(
-						"Recalculated bubbles per row on resize:",
-						BUBBLES_PER_ROW
-					);
-				}, 250); // Debounce resize event
+					console.log("Resize detected.");
+					const modeChanged = checkAndUpdateMode(); // Update mode, text, listeners if needed
+
+					// Always recalculate layout on resize
+					calculateLayoutProperties();
+					updateBodyPadding();
+
+					// Optional: Rebuild grid only if essential (e.g., bubble count changes)
+					// For simplicity, current version rebuilds to ensure layout updates fully.
+					console.log(`Rebuilding grid due to resize.`);
+					clearAllRows();
+					const initialRows = calculateInitialRows();
+					addRows(initialRows);
+				}, 250);
 			});
 
-			// --- Initialization ---
 			function initialize() {
-				console.log(
-					`Initial calculation: ${BUBBLES_PER_ROW} bubbles/row, ${INITIAL_ROWS} initial rows.`
-				);
-				addRows(INITIAL_ROWS);
+				console.log("Initializing...");
+				stopContinuousPop(); // Ensure clean state
+				isInputDown = false;
+				needsInitialSetup = true; // Force setup on first load
+
+				requestAnimationFrame(() => {
+					checkAndUpdateMode(); // Set initial mode, text, listeners
+					calculateLayoutProperties();
+					updateBodyPadding();
+					const initialRowCount = calculateInitialRows();
+					clearAllRows();
+					addRows(initialRowCount);
+					infoVisible = true;
+					infoElement.classList.remove("hidden");
+					console.log("Initialization complete.");
+				});
 			}
 
-			// Start the app
+			// Start
 			initialize();
 		</script>
 	</body>
